@@ -3,15 +3,9 @@ services:
     build: .
     container_name: hermes-agent
     restart: unless-stopped
-    # Publish to an ephemeral host port; public HTTPS access goes through Traefik.
-    # (Avoids exposing the app unauthenticated on a fixed public :8000.)
+    # Bind to localhost only — public access goes through the host nginx reverse proxy.
+    # (This VPS uses nginx, not Traefik, so no Traefik labels are needed.)
     ports:
-      - "8000"
+      - "127.0.0.1:8700:8000"
     env_file:
       - .env
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.hermes.rule=Host(`hermes.srv1719841.hstgr.cloud`)"
-      - "traefik.http.routers.hermes.entrypoints=websecure"
-      - "traefik.http.routers.hermes.tls.certresolver=letsencrypt"
-      - "traefik.http.services.hermes.loadbalancer.server.port=8000"
