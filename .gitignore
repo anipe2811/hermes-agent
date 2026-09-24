@@ -10,3 +10,6 @@ venv/
 
 # Local tooling
 .claude/
+
+# Local session store
+data/

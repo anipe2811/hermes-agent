@@ -1,11 +1,31 @@
 services:
   hermes:
     build: .
+    image: hermes-agent:local
     container_name: hermes-agent
     restart: unless-stopped
-    # Bind to localhost only — public access goes through the host nginx reverse proxy.
-    # (This VPS uses nginx, not Traefik, so no Traefik labels are needed.)
+    # Bind to localhost only — public access goes through Cloudflare, either via
+    # the host nginx reverse proxy (scripts/setup-nginx.sh) or the tunnel below.
     ports:
       - "127.0.0.1:8700:8000"
     env_file:
       - .env
+    volumes:
+      - hermes-data:/app/data
+
+  # Optional: Cloudflare Tunnel — no inbound ports open on the VPS at all.
+  # Create a tunnel in Cloudflare Zero Trust, route hermes.growgig.tech to
+  # http://hermes:8000, put TUNNEL_TOKEN in .env, then:
+  #   docker compose --profile tunnel up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-}
+    depends_on:
+      - hermes
+
+volumes:
+  hermes-data:
