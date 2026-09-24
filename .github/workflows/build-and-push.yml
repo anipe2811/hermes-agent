@@ -3,10 +3,37 @@ name: build-and-push
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check app tests
+
+      - name: Test
+        run: pytest -q
+
   build:
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,4 +54,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/anipe2811/hermes-agent:latest
+          # :sha tag makes every build addressable, so a bad deploy can be rolled back.
+          tags: |
+            ghcr.io/anipe2811/hermes-agent:latest
+            ghcr.io/anipe2811/hermes-agent:${{ github.sha }}
